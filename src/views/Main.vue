@@ -1,5 +1,5 @@
 <template>
-  <v-container>
+  <v-container class="main-container d-flex align-center justify-center" fluid>
     <currency-rate-form />
   </v-container>
 </template>
@@ -16,4 +16,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.main-container {
+  height: 100vh;
+}
 </style>
