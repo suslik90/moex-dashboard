@@ -1,31 +1,20 @@
 <template>
   <v-container fluid>
-    <div class="d-flex justify-center">
-      <div class="currency">{{ currency }}</div>
-      <div
-        class="change ml-2"
-        :class="{ positive: change >= 0, negative: change < 0 }"
-      >
-        {{ (change > 0 ? "+" : "") + change }}
-        <v-icon v-if="change >= 0" color="green"
-          >mdi-arrow-top-right-thin</v-icon
-        >
-        <v-icon v-if="change < 0" color="red"
-          >mdi-arrow-bottom-right-thin</v-icon
-        >
-      </div>
-    </div>
-    <div class="d-flex justify-center">{{ responseArray.SECID }}</div>
-    <div class="d-flex justify-center">{{ responseArray.SYSTIME }}</div>
+    <currency-rate-item :item="this.TOD" />
+    <currency-rate-item :item="this.TOM" />
   </v-container>
 </template>
 
 <script>
 import DataService from "@/backend/services/dataService";
 import moment from "moment";
+import CurrencyRateItem from "@/components/CurrencyRateItem.vue";
+
+const LOTS = { TOM: "TOM", TOD: "TOD" };
 
 export default {
   name: "CurrencyRateForm",
+  components: { CurrencyRateItem },
   mounted() {
     const query_params = this.$route.query;
     if (Object.keys(query_params).length > 0) {
@@ -33,58 +22,76 @@ export default {
         this.intervalS = query_params.time;
       }
     }
-    this.addCurrency();
+    this.loadEurRubTOM();
+    this.loadEurRubTOD();
   },
   data: function () {
-    return {
+    const defLot = {
       currency: 0.0,
       change: 0,
-      intervalS: 10, //s
-      responseArray: {},
       intervalIsSet: null,
-      selectedLot:"EUR_RUB__TOM"
+      responseArray: {},
+    };
+
+    return {
+      TOM: Object.assign({}, defLot, { selectedLot: "EUR_RUB__TOM" }),
+      TOD: Object.assign({}, defLot, { selectedLot: "EUR_RUB__TOD" }),
+      intervalS: 10, //s
     };
   },
   methods: {
-    addCurrency() {
+    loadEurRubTOM() {
       const params = {
-        lot: this.selectedLot,
+        lot: this.TOM.selectedLot,
         timestamp: moment().valueOf(),
       };
       DataService.getData(params).then((data) => {
         const dataRow = data.marketdata.data[0];
         data.marketdata.columns.forEach((fieldName, index) => {
-          this.responseArray[fieldName] = dataRow[index];
+          this.TOM.responseArray[fieldName] = dataRow[index];
         });
-        this.currency = this.responseArray.MARKETPRICETODAY
-          ? this.responseArray.MARKETPRICETODAY
-          : this.responseArray.LAST;
-        this.change = this.responseArray.CHANGE;
-        if (this.intervalIsSet == null) {
-          this.intervalCurrency();
+        this.TOM.currency = this.TOM.responseArray.MARKETPRICETODAY
+          ? this.TOM.responseArray.MARKETPRICETODAY
+          : this.TOM.responseArray.LAST;
+        this.TOM.change = this.TOM.responseArray.CHANGE;
+
+        if (this.TOM.intervalIsSet == null) {
+          this.startInterval(LOTS.TOM);
         }
       });
     },
-    intervalCurrency() {
+    loadEurRubTOD() {
+      const params = {
+        lot: this.TOD.selectedLot,
+        timestamp: moment().valueOf(),
+      };
+      DataService.getData(params).then((data) => {
+        const dataRow = data.marketdata.data[0];
+        data.marketdata.columns.forEach((fieldName, index) => {
+          this.TOD.responseArray[fieldName] = dataRow[index];
+        });
+        this.TOD.currency = this.TOD.responseArray.MARKETPRICETODAY
+          ? this.TOD.responseArray.MARKETPRICETODAY
+          : this.TOD.responseArray.LAST;
+        this.TOD.change = this.TOD.responseArray.CHANGE;
+
+        if (this.TOD.intervalIsSet == null) {
+          this.startInterval(LOTS.TOD);
+        }
+      });
+    },
+    startInterval(lotName) {
       const intervalMS = this.intervalS * 1000;
-      this.intervalIsSet = setInterval(() => {
-        this.addCurrency();
-      }, intervalMS);
+      if (lotName == LOTS.TOM) {
+        this.TOM.intervalIsSet = setInterval(() => {
+          this.loadEurRubTOM();
+        }, intervalMS);
+      } else if (lotName == LOTS.TOD) {
+        this.TOD.intervalIsSet = setInterval(() => {
+          this.loadEurRubTOD();
+        }, intervalMS);
+      }
     },
   },
 };
 </script>
-<style lang="scss" scoped>
-.currency{
-  font-size: 4em;
-}
-.change{
-  font-size: 1.5em;
-}
-.positive {
-  color: green;
-}
-.negative {
-  color: red;
-}
-</style>
