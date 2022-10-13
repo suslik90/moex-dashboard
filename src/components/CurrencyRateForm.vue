@@ -1,5 +1,5 @@
 <template>
-  <v-container fluid>
+  <v-container fluid class="d-flex align-center justify-center flex-column">
     <currency-rate-item :item="this.TOD" />
     <currency-rate-item :item="this.TOM" />
   </v-container>
